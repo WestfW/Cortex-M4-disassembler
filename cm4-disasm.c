@@ -38,6 +38,13 @@ void subdecode_rmrn (uint16_t *addr, uint32_t ins) {
     curinst.rm = (ins >> 3) & 7;
 }
 
+void subdecode_rmrdall (uint16_t *addr, uint32_t ins) {
+    curinst.rd = (ins & 7);
+    if (ins & 0x80)
+	curinst.rd += 8;
+    curinst.rm = (ins >> 3) & 0xF;
+}
+
 void subdecode_im3 (uint16_t *addr, uint32_t ins) {
     curinst.rd = ins & 7;
     curinst.rn = (ins >> 3) & 7;
@@ -154,7 +161,7 @@ const decode_entry_t table_top[] = {
     { 0xF8, 0x38, decode_subim8, 0 },
 
     { 0xFC, 0x40, decode_dp, 0 },
-    { 0xFC, 0x42, decode_specdp, 0 },
+    { 0xFC, 0x44, decode_specdp, 0 },
     { 0xF8, 0x48, decode_ldvpc, 0 },
     
     { 0xF0, 0x50, decode_ldst5, 0 },
@@ -178,12 +185,8 @@ const decode_entry_t table_top[] = {
 
     { 0xFC, 0xE8, decode_thumb32, 0 },
     { 0xF0, 0xF0, decode_thumb32, 0 },
-    
 
 #if 0
-    { 0xF000, 0xB000, decode_cpumisc, 0},
-
-
     { 0xFF00, 0xB000, decode_addsubsp,0},
     { 0xFF00, 0xBA00, decode_extend, 0 },
     
@@ -229,6 +232,11 @@ void decode_mov (uint16_t *addr, uint32_t ins) {
     subdecode_im8(addr, ins);
 }
 
+void decode_movregall (uint16_t *addr, uint32_t ins) {
+    strcpy(curinst.opcode, "mov");
+    subdecode_rmrdall(addr, ins);
+}
+
 void decode_cmp (uint16_t *addr, uint32_t ins) {
     strcpy(curinst.opcode, "cmp");
     subdecode_im8(addr, ins);
@@ -263,8 +271,26 @@ void decode_dp (uint16_t *addr, uint32_t ins) {
     subdecode_rmrn(addr, ins);
 }
 
+const decode_entry_t table_specdp[] = {
+    { 0b1100, 0b0000, decode_addregall },
+    { 0b1111, 0b0101, decode_cmpregall },
+    { 0b1110, 0b0110, decode_cmpregall },
+    { 0b1100, 0b1000, decode_movregall },
+    { 0b1110, 0b1100, decode_bx },
+    { 0b1110, 0b1110, decode_blx },
+    { 0, 0, decode_error }
+};
+
+void decode_bx (uint16_t *addr, uint32_t ins) {
+}
+
+void decode_cmpregall (uint16_t *addr, uint32_t ins) {
+    strcpy(curinst.opcode, "cmp");
+    subdecode_rmrdall(addr, ins);
+}
+
 void decode_specdp (uint16_t *addr, uint32_t ins) {
-    strcpy(curinst.opcode, "specdp");
+    scan_table(addr, ins>>6, table_specdp);
 }
 
 void decode_ldst (uint16_t *addr, uint32_t ins) {
@@ -322,45 +348,73 @@ void decode_multiple (uint16_t *addr, uint32_t ins) {
     strcpy(curinst.opcode, "lmul");
 }
 
-void decode_bcc  (uint16_t *addr, uint32_t ins) {
+void decode_bcc (uint16_t *addr, uint32_t ins) {
     strcpy(curinst.opcode, "bcc");
 }
 
-void decode_branchc(uint16_t *addr, uint32_t ins){
-    strcpy(curinst.opcode, "branchc");
+const char str_cond[][3] = { "eq\0", "ne\0", "cs\0", "cc\0",
+			     "mi\0", "pl\0", "vs\0", "vc\0",
+			     "hi\0", "ls\0", "ge\0", "lt\0",
+			     "gt\0", "le\0", "\0"  , "\0" };
+
+void decode_branchc (uint16_t *addr, uint32_t ins)
+{
+    strcpy(curinst.opcode, "b");
+    strcpy(curinst.opcodemod, &str_cond[(ins>>8) & 0xF][0]);
+    curinst.immval = ins & 0xFF; /* 8 bit immediate */
+    if (curinst.opcodemod[0] == 0) {
+	strcpy(curinst.opcode, "svc");
+    } else {
+	if (ins & 0x80)
+	    ins |= 0xFF00;	      /* sign extend */
+	curinst.immval *= 2;
+	curinst.immval += 4 + sample_base + (uint32_t) (addr-codesample)*2;
+    }
+    curinst.hints.immval = 1;
 }
 
-void decode_branch(uint16_t *addr, uint32_t ins){
-    strcpy(curinst.opcode, "b.w");
+void decode_branch (uint16_t *addr, uint32_t ins){
+    strcpy(curinst.opcode, "b.n");
+    curinst.immval = ins & 0x3FF;  // 11bit offset
+    if (ins & 0x200)
+	ins |= 0xFC00;	      /* sign extend */
+    curinst.immval *= 2;
+    curinst.immval += 4 + sample_base + (uint32_t) (addr-codesample)*2;
+    curinst.hints.immval = 1;
 }
 
 void decode_blx(uint16_t *addr, uint32_t ins){
     strcpy(curinst.opcode, "blx");
 }
 
-void decode_bprefix(uint16_t *addr, uint32_t ins){
+void decode_bprefix (uint16_t *addr, uint32_t ins){
     strcpy(curinst.opcode, "pre");
 }
-void decode_bl(uint16_t *addr, uint32_t ins){
+void decode_bl (uint16_t *addr, uint32_t ins){
     strcpy(curinst.opcode, "bl");
 }
 
 
 void decode_add_r(uint16_t *addr, uint32_t ins) {
     strcpy(curinst.opcode, "add");
-    subdecode_rsrmrd(addr, *addr);
+    subdecode_rsrmrd(addr, ins);
 }
 
-void decode_subr(uint16_t *addr, uint32_t ins) {
-    strcpy(curinst.opcode, "sub");
-    subdecode_rsrmrd(addr, *addr);
+void decode_addregall(uint16_t *addr, uint32_t ins) {
+    strcpy(curinst.opcode, "add");
+    subdecode_rmrdall(addr, ins);
 }
-void decode_addim3(uint16_t *addr, uint32_t ins) {
+
+void decode_subr (uint16_t *addr, uint32_t ins) {
+    strcpy(curinst.opcode, "sub");
+    subdecode_rsrmrd(addr, ins);
+}
+void decode_addim3 (uint16_t *addr, uint32_t ins) {
     strcpy(curinst.opcode, "add");
     subdecode_im3(addr, *addr);
 }
 
-void decode_subim3(uint16_t *addr, uint32_t ins) {
+void decode_subim3 (uint16_t *addr, uint32_t ins) {
     strcpy(curinst.opcode, "sub");
     subdecode_im3(addr, *addr);
 }
@@ -408,15 +462,16 @@ const decode_entry_t table_cpumisc[] = {
     { 0x78, 0x08, decode_cbz },
     { 0x78, 0x18, decode_cbnz },
     { 0x78, 0x48, decode_cbnz },
-    { 0x38, 0x08, decode_sxth },
-    { 0x38, 0x08, decode_sxtb },
-    { 0x38, 0x08, decode_uxth }, 
-    { 0x38, 0x08, decode_uxtb },
-    { 0x38, 0x08, decode_rev },
-    { 0x38, 0x08, decode_rev16 },
-    { 0x38, 0x08, decode_revsh },
-    { 0x38, 0x08, decode_bkpt },
-    { 0x38, 0x08, decode_it },
+
+    { 0b1111110, 0b0010000, decode_sxth },
+    { 0b1111110, 0b0010010, decode_sxtb },
+    { 0b1111110, 0b0010100, decode_uxth }, 
+    { 0b1111110, 0b0010110, decode_uxtb },
+    { 0b1111110, 0b1010000, decode_rev },
+    { 0b1111110, 0b1010010, decode_rev16 },
+    { 0b1111110, 0b1010110, decode_revsh },
+    { 0b1111000, 0b1110000, decode_bkpt },
+    { 0b1111000, 0b1111000, decode_it },
     { 0x0, 0, decode_error }
 };
 
@@ -478,8 +533,15 @@ void decode_bkpt (uint16_t *addr, uint32_t ins) {
     strcpy(curinst.opcode, "bkpt");
 }
 
-void decode_it (uint16_t *addr, uint32_t ins) {
-    strcpy(curinst.opcode, "it");
+const char str_hints[][4] = { "nop\0", "yld\0", "wfe\0", "wfi\0", "sev\0" };
+
+void decode_it (uint16_t *addr, uint32_t ins)
+{
+    if (ins & 0xF) {
+        strcpy(curinst.opcode, "it");
+    } else {
+        strcpy(curinst.opcode, str_hints[(ins>>4) & 0xF]);
+    }
 }
 
 void decode_cpumisc (uint16_t *addr, uint32_t ins) {
@@ -835,7 +897,7 @@ uint16_t cm0_sample_code[] = {
 char *register_names[] = {"r0", "r1", "r2", "r3",
 			  "r4", "r5", "r6", "r7",
 			  "r8", "r9", "r10", "r11",
-			  "r4", "sp", "lr", "pc"};
+			  "r12", "sp", "lr", "pc"};
 			 
 
 void print_ins()

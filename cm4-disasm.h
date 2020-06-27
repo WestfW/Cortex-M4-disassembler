@@ -120,6 +120,12 @@ void decode_32dpreg(uint16_t *addr, uint32_t ins);
 void decode_32multiply(uint16_t *addr, uint32_t ins);
 void decode_32lmultiply(uint16_t *addr, uint32_t ins);
 void decode_32coproc(uint16_t *addr, uint32_t ins);
+void decode_movregall(uint16_t *addr, uint32_t ins);
+void decode_cmpregall(uint16_t *addr, uint32_t ins);
+void decode_addregall(uint16_t *addr, uint32_t ins);
+void decode_bx(uint16_t *addr, uint32_t ins);
+void decode_blx(uint16_t *addr, uint32_t ins);
+
 
 uint32_t cm0_sample_base;
 uint16_t cm0_sample_code[];
