@@ -1,0 +1,100 @@
+
+Table A5-1 16-bit Thumb instruction encoding
+
+opcode Instruction or instruction class
+00xx.xx Shift (immediate), add, subtract, move, and compare on page A5-130
+0100.00 Data processing on page A5-131
+0100.01 Special data instructions and branch and exchange on page A5-132
+0100.1x Load from Literal Pool, see LDR (literal) on page A7-248
+0101.xx Load/store single data item on page A5-133
+011xx.x
+100x.xx
+1010.0x Generate PC-relative address, see ADR on page A7-198
+1010.1x Generate SP-relative address, see ADD (SP plus immediate) on page A7-194
+1011.xx Miscellaneous 16-bit instructions on page A5-134
+1100.0x Store multiple registers, see STM, STMIA, STMEA on page A7-383
+1100.1x Load multiple registers, see LDM, LDMIA, LDMFD on page A7-242
+1101.xx Conditional branch, and Supervisor Call on page A5-136
+1110.0x Unconditional Branch, see B on page A7-205
+
+
+Shift (immediate), add, subtract, move, and compare
+
+15 14 13 12 11 10 9 8 7 6 5 4 3 2 1 0
+00oo.ooo opcode
+ opcode Instruction
+0000.0xx Logical Shift Left
+0000.1xx Logical Shift Right
+0001.0xx Arithmetic Shift Right
+
+0001.100 Add register
+0001.101 Subtract register
+
+0001.110 Add 3-bit immediate
+0001.111 Subtract 3-bit immediate
+0010.0xx Move
+0010.1xx Compare
+
+0011.0xx Add 8-bit immediate
+0011.1xx Subtract 8-bit immediate
+
+
+Data processing
+0100.00oooo
+ opcode Instruction
+0100.000000 Bitwise AND
+0100.000001 Exclusive OR
+0100.000010 Logical Shift Left
+0100.000011 Logical Shift Right
+0100.000100 Arithmetic Shift Right
+0100.000101 Add with Carry
+0100.000110 Subtract with Carry
+0100.000111 Rotate Right
+0100.001000 Set flags on bitwise AND
+0100.001001 Reverse Subtract from 0
+0100.001010 Compare Registers
+0100.001011 Compare Negative
+0100.001100 Logical OR
+0100.001101 Multiply Two Registers
+0100.001110 Bit Clear
+0100.001111 Bitwise NOT
+
+Special data instructions and branch and exchange
+0100.01oooo
+ opcode Instruction
+0100.0100xx Add Registers
+0100.010100 UNPREDICTABLE
+0100.010101 Compare Registers
+0100.01011x Compare Registers
+0100.0110xx Move Registers
+0100.01110x Branch and Exchange
+0100.01111x Branch with Link and Exchange
+
+Load/store single data item
+These instructions have one of the following values in opA:
+• 0b0101.
+• 0b011x.
+• 0b100x.
+
+
+Miscellaneous 16-bit instructions
+1011.ooooooo
+ opcode Instruction
+1011.0110011 Change Processor State
+1011.00000xx Add immediate to SP
+1011.00001xx Subtract immediate from SP
+1011.0001xxx Compare and Branch on Zero 
+1011.001000x Signed Extend Halfword 
+1011.001001x Signed Extend Byte
+1011.001010x Unsigned Extend Halfword 
+1011.000011x Unsigned Extend Byte
+1011.0011xxx Compare and Branch on Zero 
+1011.010xxxx Push Multiple Registers
+1011.1001xxx Compare and Branch on Nonzero 
+1011.1010.00x Byte-Reverse Word
+1011.101001x Byte-Reverse Packed Halfword 
+1011.101011x Byte-Reverse Signed Halfword 
+1011.1011xxx Compare and Branch on Nonzero 
+1011.110xxxx Pop Multiple Registers
+1011.1110xxx Breakpoint
+1011.1111xxx If-Then, and hints
